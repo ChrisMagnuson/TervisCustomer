@@ -98,6 +98,42 @@ function New-TervisCustomerSearchDashboard {
 	}
 	Start-UDDashboard -Dashboard $Dashboard -Port 10000 -AllowHttpForLogin
 
+
+
+	Get-UDDashboard | Where port -eq 10000 | Stop-UDDashboard
+
+	$CustomerSearchInputPage = New-UDPage -Name "CustomerSearchInput" -Icon home -Content {
+		New-UDInput -Title "Customer Search" -Endpoint {
+			param(
+				[String]$Address1
+			)
+			if ($Address1) {
+				New-UDInputAction -RedirectUrl "/AccountResults/$Address1"
+			}
+		}
+	}
+
+	$AccountResultsPage = New-UDPage -Url "/AccountResults/:Address1" -Icon link -Endpoint {
+		param (
+			$Address1
+		)
+		if (-Not $Cache:EBSPowershellConfiguration ) {
+			$Cache:EBSPowershellConfiguration = Get-TervisEBSPowershellConfiguration -Name Delta
+		}
+		Set-EBSPowershellConfiguration -Configuration $Cache:EBSPowershellConfiguration
+		
+		if ($Address1) {
+			$AccountNumber = Find-TervisCustomer -Address1 $Address1
+		}
+		
+		if ($AccountNumber) {
+			New-UDCard -Title "Account Number(s)" -Text ($AccountNumber | Out-String)
+		}			 
+	}    
+	$Dashboard = New-UDDashboard -Pages @($CustomerSearchInputPage, $AccountResultsPage) -Title "Tervis Customer Search"
+	Start-UDDashboard -Dashboard $Dashboard -Port 10000 -AllowHttpForLogin
+
+
     $dashboard = New-UDDashboard -Title "Tervis Customer Search" -Content {
         New-UDInput -Title "New Work Order" -Id "Form" -DebugEndpoint -Endpoint {
 			param (
