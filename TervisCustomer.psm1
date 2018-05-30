@@ -74,126 +74,53 @@ function Get-AddressWordAlternative {
 function New-TervisCustomerSearchDashboard {
 	Get-UDDashboard | Where port -eq 10000 | Stop-UDDashboard
 
-	$Dashboard = New-UDDashboard -Title "Tervis Customer Search" -Content {
-		New-UDInput -Title "Select me" -Endpoint {
-			param(
-				[ValidateSet("Yes", "No", "Don't care")]$Opinion,
-				[String]$Address1
-			)
-			$EBSPowerShellConfiguration = Get-EBSPowershellConfiguration
-			if (-Not $EBSPowerShellConfiguration) { Set-TervisEBSEnvironment -Name Delta}
-
-			$Count++
-			if ($Address1) {
-				$AccountNumber = Find-TervisCustomer -Address1 $Address1
-			}
-			New-UDInputAction -Toast "You selected: $Opinion $Count $($AccountNumber| out-string)"
-			
-			if ($AccountNumber) {
-				New-UDInputAction -Content @(
-					New-UDCard -Title "Account Number(s)" -Text ($AccountNumber | Out-String)
-				)
-			}			
-		} -FontColor "black"
-	}
-	Start-UDDashboard -Dashboard $Dashboard -Port 10000 -AllowHttpForLogin
-
-#### Query String test
-Get-UDDashboard | Where port -eq 10000 | Stop-UDDashboard
-
 	$CustomerSearchInputPage = New-UDPage -Name "CustomerSearchInput" -Icon home -Content {
 		New-UDInput -Title "Customer Search" -Endpoint {
 			param(
-				[String]$Address1
+				[String]$Address1,
+				$FirstName,
+				$LastName,
+				$PhoneNumber,
+				$EmailAddress
 			)
-			if ($Address1) {
-				$QueryString = @{Address1=$Address1} | ConvertTo-URLEncodedQueryStringParameterString
-				New-UDInputAction -RedirectUrl "/AccountResults/?$QueryString"
-			}
+			$GUID = New-Guid | Select-Object -ExpandProperty GUID
+			Set-Item -Path Cache:$GUID -Value $PSBoundParameters
+			New-UDInputAction -RedirectUrl "/AccountResults/$GUID"			
 		}
 	}
 
-	$AccountResultsPage = New-UDPage -Url "/AccountResults/" -Icon link -Endpoint {
-		Wait-Debugger
-		$Address1 = $Request.Query["Address1"]
-
-		if ($Address1) {
-			$AccountNumber = Find-TervisCustomer -Address1 $Address1
-		}
-		
-		if ($AccountNumber) {
-			New-UDCard -Title "Account Number(s)" -Text ($AccountNumber | Out-String)
-			
-			
-			New-UDTable -Title "Account Number" -Headers @("Account Number") -Endpoint {
-				$AccountNumber | 
-				% { [psCustomObject]@{AccountNumber = $_} } |
-				Out-UDTableData -Property AccountNumber
-			}
-			
-			New-UDGrid -Title "Customers" -Headers AccountNumber, PARTY_NAME, ADDRESS1, CITY, STATE, POSTAL_CODE -Properties AccountNumber, PARTY_NAME, ADDRESS1, CITY, STATE, POSTAL_CODE -Endpoint {
-				$AccountNumber | 
-				% { 
-					$Account = Get-EBSTradingCommunityArchitectureCustomerAccount -Account_Number $_
-					$Organization = Get-EBSTradingCommunityArchitectureOrganizationObject -Party_ID $Account.Party_ID
-					$Organization | 
-					Select-Object -Property PARTY_NAME, ADDRESS1, CITY, STATE, POSTAL_CODE, @{
-						Name = "AccountNumber"
-						Expression = {$Account.ACCOUNT_NUMBER}
-					}
-				} |
-				Out-UDGridData
-			}
-
-			New-UDCollection -Header "Account Number" -Content {
-				$AccountNumber | ForEach-Object {
-					New-UDCollectionItem -Content { $_ }
-				}
-			}
-		}
-	}
-	$Dashboard = New-UDDashboard -Pages @($CustomerSearchInputPage, $AccountResultsPage) -Title "Tervis Customer Search" -EndpointInitializationScript {
-		if (-Not $Cache:EBSPowershellConfiguration ) {
-			$Cache:EBSPowershellConfiguration = Get-TervisEBSPowershellConfiguration -Name Delta
-		}
-		Set-EBSPowershellConfiguration -Configuration $Cache:EBSPowershellConfiguration
-	}
-	Start-UDDashboard -Dashboard $Dashboard -Port 10000 -AllowHttpForLogin
-####
-
-
-
-	Get-UDDashboard | Where port -eq 10000 | Stop-UDDashboard
-
-	$CustomerSearchInputPage = New-UDPage -Name "CustomerSearchInput" -Icon home -Content {
-		New-UDInput -Title "Customer Search" -Endpoint {
-			param(
-				[String]$Address1
-			)
-			if ($Address1) {
-				New-UDInputAction -RedirectUrl "/AccountResults/$Address1"
-			}
-		}
-	}
-
-	$AccountResultsPage = New-UDPage -Url "/AccountResults/:Address1" -Icon link -Endpoint {
-		param (
-			$Address1
+	$AccountResultsPage = New-UDPage -Url "/AccountResults/:GUID" -Icon link -Endpoint {
+		param(
+			$GUID
 		)
-		
-		if ($Address1) {
-			$AccountNumber = Find-TervisCustomer -Address1 $Address1
+		$BoundParameters = Get-Item Cache:$GUID
+		#,
+		#	$LastName,
+		#	$PhoneNumber,
+		#	$EmailAddress
+		#@{
+		#	Address1 = $Address1
+		#	FirstName = $FirstName
+		#	LastName = $LastName
+		#	PhoneNumber = $PhoneNumber
+		#	EmailAddress = $EmailAddress
+		#} | Remove-HashtableKeysWithEmptyOrNullValues
+		#Wait-Debugger
+		#$Parameters = $PSBoundParameters
+
+		if ($BoundParameters["Address1"]) {
+			$AccountNumber = Find-TervisCustomer -Address1 $BoundParameters["Address1"]
 		}
 		
 		if ($AccountNumber) {
 			New-UDCard -Title "Account Number(s)" -Text ($AccountNumber | Out-String)
 			
 			
-			New-UDTable -Title "Account Number" -Headers @("Account Number") -Endpoint {
-				$AccountNumber | 
-				% { [psCustomObject]@{AccountNumber = $_} } |
-				Out-UDTableData -Property AccountNumber
-			}
+			#New-UDTable -Title "Account Number" -Headers @("Account Number") -Endpoint {
+			#	$AccountNumber | 
+			#	% { [psCustomObject]@{AccountNumber = $_} } |
+			#	Out-UDTableData -Property AccountNumber
+			#}
 			
 			New-UDGrid -Title "Customers" -Headers AccountNumber, PARTY_NAME, ADDRESS1, CITY, STATE, POSTAL_CODE -Properties AccountNumber, PARTY_NAME, ADDRESS1, CITY, STATE, POSTAL_CODE -Endpoint {
 				$AccountNumber | 
@@ -209,11 +136,11 @@ Get-UDDashboard | Where port -eq 10000 | Stop-UDDashboard
 				Out-UDGridData
 			}
 
-			New-UDCollection -Header "Account Number" -Content {
-				$AccountNumber | ForEach-Object {
-					New-UDCollectionItem -Content { $_ }
-				}
-			}
+			#New-UDCollection -Header "Account Number" -Content {
+			#	$AccountNumber | ForEach-Object {
+			#		New-UDCollectionItem -Content { $_ }
+			#	}
+			#}
 		}
 	}
 
@@ -224,15 +151,11 @@ Get-UDDashboard | Where port -eq 10000 | Stop-UDDashboard
 		$Account = Get-EBSTradingCommunityArchitectureCustomerAccount -Account_Number $AccountNumber
 		$Organization = Get-EBSTradingCommunityArchitectureOrganizationObject -Party_ID $Account.Party_ID
 		
-		
-		#New-UDHtml -Markup (
-		#	$Organization | FL | out-string | Replace-ContentValue -OldValue "`r`n" -NewValue "<br>"
-		#)
-		Remove-TypeData System.Array
+		Remove-TypeData System.Array -ErrorAction SilentlyContinue
 		New-UDHtml -Markup @"
-		<pre>
-		$($Organization | ConvertTo-Json -Depth 100)
-		</pre>
+<pre>
+$($Organization | ConvertTo-Yaml)
+</pre>
 "@
 
 		#New-UDCard -Title "Account Details" -Text (
@@ -249,22 +172,6 @@ Get-UDDashboard | Where port -eq 10000 | Stop-UDDashboard
 
 	Start-UDDashboard -Dashboard $Dashboard -Port 10000 -AllowHttpForLogin
 
-
-    $dashboard = New-UDDashboard -Title "Tervis Customer Search" -Content {
-        New-UDInput -Title "New Work Order" -Id "Form" -DebugEndpoint -Endpoint {
-			param (
-				$Address1,
-				$PhoneNumber,
-				$EmailAddress,
-				$Firstame,
-				$LastName
-			)
-			$EBSPowerShellConfiguration = Get-EBSPowershellConfiguration
-			if (-Not $EBSPowerShellConfiguration) { Set-TervisEBSEnvironment -Name Delta}
-			Find-TervisCustomer @PSBoundParameters
-		}
-    } 
-    Start-UDDashboard -Dashboard $Dashboard -Port 10000 -AllowHttpForLogin
 }
 
 #https://github.com/lazywinadmin/PowerShell/blob/master/TOOL-Remove-StringSpecialCharacter/Remove-StringSpecialCharacter.ps1
