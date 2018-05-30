@@ -128,20 +128,36 @@ function New-TervisCustomerSearchDashboard {
 		
 		if ($AccountNumber) {
 			New-UDCard -Title "Account Number(s)" -Text ($AccountNumber | Out-String)
-			New-UDCard -Title "Account Number(s)" -Content {
-				New-UDTable -Title "Account Number" -Headers @("Account Number") -Endpoint {
-					$AccountNumber | 
-					% { [psCustomObject]@{AccountNumber = $_} } |
-					Out-UDTableData -Property AccountNumber
-				}
+			
+			
+			New-UDTable -Title "Account Number" -Headers @("Account Number") -Endpoint {
+				$AccountNumber | 
+				% { [psCustomObject]@{AccountNumber = $_} } |
+				Out-UDTableData -Property AccountNumber
 			}
+			
+			New-UDGrid -Title "Customers" -Headers AccountNumber, PARTY_NAME, ADDRESS1, CITY, STATE, POSTAL_CODE -Properties AccountNumber, PARTY_NAME, ADDRESS1, CITY, STATE, POSTAL_CODE -Endpoint {
+				Set-EBSPowershellConfiguration -Configuration $Cache:EBSPowershellConfiguration
+				$AccountNumber | 
+				% { 
+					$Account = Get-EBSTradingCommunityArchitectureCustomerAccount -Account_Number $_
+					$Organization = Get-EBSTradingCommunityArchitectureOrganizationObject -Party_ID $Account.Party_ID
+					$Organization | 
+					Select-Object -Property PARTY_NAME, ADDRESS1, CITY, STATE, POSTAL_CODE, @{
+						Name = "AccountNumber"
+						Expression = {$Account.ACCOUNT_NUMBER}
+					}
+				} |
+				Out-UDGridData
+			}
+
 			New-UDCollection -Header "Account Number" -Content {
 				$AccountNumber | ForEach-Object {
 					New-UDCollectionItem -Content { $_ }
 				}
 			}
-		}			 
-	}    
+		}
+	}
 	$Dashboard = New-UDDashboard -Pages @($CustomerSearchInputPage, $AccountResultsPage) -Title "Tervis Customer Search"
 	Start-UDDashboard -Dashboard $Dashboard -Port 10000 -AllowHttpForLogin
 
