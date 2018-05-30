@@ -116,12 +116,7 @@ function New-TervisCustomerSearchDashboard {
 	$AccountResultsPage = New-UDPage -Url "/AccountResults/:Address1" -Icon link -Endpoint {
 		param (
 			$Address1
-		)
-		if (-Not $Cache:EBSPowershellConfiguration ) {
-			$Cache:EBSPowershellConfiguration = Get-TervisEBSPowershellConfiguration -Name Delta
-		}
-		Set-EBSPowershellConfiguration -Configuration $Cache:EBSPowershellConfiguration
-		
+		)		
 		if ($Address1) {
 			$AccountNumber = Find-TervisCustomer -Address1 $Address1
 		}
@@ -137,7 +132,6 @@ function New-TervisCustomerSearchDashboard {
 			}
 			
 			New-UDGrid -Title "Customers" -Headers AccountNumber, PARTY_NAME, ADDRESS1, CITY, STATE, POSTAL_CODE -Properties AccountNumber, PARTY_NAME, ADDRESS1, CITY, STATE, POSTAL_CODE -Endpoint {
-				Set-EBSPowershellConfiguration -Configuration $Cache:EBSPowershellConfiguration
 				$AccountNumber | 
 				% { 
 					$Account = Get-EBSTradingCommunityArchitectureCustomerAccount -Account_Number $_
@@ -158,7 +152,12 @@ function New-TervisCustomerSearchDashboard {
 			}
 		}
 	}
-	$Dashboard = New-UDDashboard -Pages @($CustomerSearchInputPage, $AccountResultsPage) -Title "Tervis Customer Search"
+	$Dashboard = New-UDDashboard -Pages @($CustomerSearchInputPage, $AccountResultsPage) -Title "Tervis Customer Search" -EndpointInitializationScript {
+		if (-Not $Cache:EBSPowershellConfiguration ) {
+			$Cache:EBSPowershellConfiguration = Get-TervisEBSPowershellConfiguration -Name Delta
+		}
+		Set-EBSPowershellConfiguration -Configuration $Cache:EBSPowershellConfiguration
+	}
 	Start-UDDashboard -Dashboard $Dashboard -Port 10000 -AllowHttpForLogin
 
 
