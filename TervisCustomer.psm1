@@ -128,6 +128,18 @@ function New-TervisCustomerSearchDashboard {
 		
 		if ($AccountNumber) {
 			New-UDCard -Title "Account Number(s)" -Text ($AccountNumber | Out-String)
+			New-UDCard -Title "Account Number(s)" -Content {
+				New-UDTable -Title "Account Number" -Headers @("Account Number") -Endpoint {
+					$AccountNumber | 
+					% { [psCustomObject]@{AccountNumber = $_} } |
+					Out-UDTableData -Property AccountNumber
+				}
+			}
+			New-UDCollection -Header "Account Number" -Content {
+				$AccountNumber | ForEach-Object {
+					New-UDCollectionItem -Content { $_ }
+				}
+			}
 		}			 
 	}    
 	$Dashboard = New-UDDashboard -Pages @($CustomerSearchInputPage, $AccountResultsPage) -Title "Tervis Customer Search"
