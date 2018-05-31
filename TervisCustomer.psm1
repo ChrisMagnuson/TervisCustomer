@@ -3,14 +3,26 @@ $ModulePath = (Get-Module -ListAvailable TervisCustomer).ModuleBase
 
 function Find-TervisCustomer {
     param (
-        $Address1,
+		$Address1,
+		$Postal_Code,
+		$State,
         $PhoneNumber,
-        $EmailAddress,
-        $Firstame,
-        $LastName
+        $Email_Address,
+        $Person_First_Name,
+        $Person_Last_Name
     )
-	$AddressLinePossibilities = $Address1 | Get-AddressLinePossibility
-    Find-EBSCustomerAccountNumber -Address1 $AddressLinePossibilities
+	$Parameters = $PSBoundParameters | 
+	ConvertFrom-PSBoundParameters -ExcludeProperty PhoneNumber, State
+
+	if ($Address1) {
+		$Parameters |
+		Add-Member -MemberType ScriptProperty -Name Address1 -Force -Value {
+			$Address1 | Get-AddressLinePossibility
+		}
+	}
+
+	$ParametersHash = $Parameters | ConvertTo-HashTable
+    Find-EBSCustomerAccountNumber @ParametersHash
 }
 
 function Get-AddressSlotCombinations { 
@@ -77,7 +89,7 @@ function New-TervisCustomerSearchDashboard {
 	$CustomerSearchInputPage = New-UDPage -Name "CustomerSearchInput" -Icon home -Content {
 		New-UDInput -Title "Customer Search" -Endpoint {
 			param(
-				[String]$Address1,
+				$Address1,
 				$FirstName,
 				$LastName,
 				$PhoneNumber,
@@ -94,34 +106,11 @@ function New-TervisCustomerSearchDashboard {
 			$GUID
 		)
 		$BoundParameters = Get-Item Cache:$GUID
-		#,
-		#	$LastName,
-		#	$PhoneNumber,
-		#	$EmailAddress
-		#@{
-		#	Address1 = $Address1
-		#	FirstName = $FirstName
-		#	LastName = $LastName
-		#	PhoneNumber = $PhoneNumber
-		#	EmailAddress = $EmailAddress
-		#} | Remove-HashtableKeysWithEmptyOrNullValues
-		#Wait-Debugger
-		#$Parameters = $PSBoundParameters
-
-		if ($BoundParameters["Address1"]) {
-			$AccountNumber = Find-TervisCustomer -Address1 $BoundParameters["Address1"]
-		}
+		$AccountNumber = Find-TervisCustomer -Email_Address $BoundParameters["EmailAddress"]
 		
 		if ($AccountNumber) {
 			New-UDCard -Title "Account Number(s)" -Text ($AccountNumber | Out-String)
-			
-			
-			#New-UDTable -Title "Account Number" -Headers @("Account Number") -Endpoint {
-			#	$AccountNumber | 
-			#	% { [psCustomObject]@{AccountNumber = $_} } |
-			#	Out-UDTableData -Property AccountNumber
-			#}
-			
+
 			New-UDGrid -Title "Customers" -Headers AccountNumber, PARTY_NAME, ADDRESS1, CITY, STATE, POSTAL_CODE -Properties AccountNumber, PARTY_NAME, ADDRESS1, CITY, STATE, POSTAL_CODE -Endpoint {
 				$AccountNumber | 
 				% { 
@@ -135,12 +124,6 @@ function New-TervisCustomerSearchDashboard {
 				} |
 				Out-UDGridData
 			}
-
-			#New-UDCollection -Header "Account Number" -Content {
-			#	$AccountNumber | ForEach-Object {
-			#		New-UDCollectionItem -Content { $_ }
-			#	}
-			#}
 		}
 	}
 
@@ -157,10 +140,6 @@ function New-TervisCustomerSearchDashboard {
 $($Organization | ConvertTo-Yaml)
 </pre>
 "@
-
-		#New-UDCard -Title "Account Details" -Text (
-		#	$Organization | FL | out-string | Replace-ContentValue -OldValue "`r`n" -NewValue "<br>"
-		#)
 	}
 	
 	$Dashboard = New-UDDashboard -Pages @($CustomerSearchInputPage, $AccountResultsPage, $AccountDetailsPage) -Title "Tervis Customer Search" -EndpointInitializationScript {
