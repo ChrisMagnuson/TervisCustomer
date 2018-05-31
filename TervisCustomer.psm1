@@ -11,7 +11,7 @@ function Find-TervisCustomer {
         $Person_First_Name,
         $Person_Last_Name
     )
-	$Parameters = $PSBoundParameters | 
+	$Parameters = $PSBoundParameters |
 	ConvertFrom-PSBoundParameters -ExcludeProperty PhoneNumber, State
 
 	if ($Address1) {
@@ -88,15 +88,21 @@ function New-TervisCustomerSearchDashboard {
 
 	$CustomerSearchInputPage = New-UDPage -Name "CustomerSearchInput" -Icon home -Content {
 		New-UDInput -Title "Customer Search" -Endpoint {
-			param(
+			param (
 				$Address1,
-				$FirstName,
-				$LastName,
+				$Postal_Code,
+				$State,
 				$PhoneNumber,
-				$EmailAddress
+				$Email_Address,
+				$Person_First_Name,
+				$Person_Last_Name
 			)
 			$GUID = New-Guid | Select-Object -ExpandProperty GUID
-			Set-Item -Path Cache:$GUID -Value $PSBoundParameters
+			Set-Item -Path Cache:$GUID -Value (
+				$PSBoundParameters |
+				ConvertFrom-PSBoundParameters -AsHashTable |
+				Remove-HashtableKeysWithEmptyOrNullValues
+			)
 			New-UDInputAction -RedirectUrl "/AccountResults/$GUID"			
 		}
 	}
@@ -104,9 +110,9 @@ function New-TervisCustomerSearchDashboard {
 	$AccountResultsPage = New-UDPage -Url "/AccountResults/:GUID" -Icon link -Endpoint {
 		param(
 			$GUID
-		)
+		)		
 		$BoundParameters = Get-Item Cache:$GUID
-		$AccountNumber = Find-TervisCustomer -Email_Address $BoundParameters["EmailAddress"]
+		$AccountNumber = Find-TervisCustomer @BoundParameters
 		
 		if ($AccountNumber) {
 			New-UDCard -Title "Account Number(s)" -Text ($AccountNumber | Out-String)
@@ -150,7 +156,6 @@ $($Organization | ConvertTo-Yaml)
 	}
 
 	Start-UDDashboard -Dashboard $Dashboard -Port 10000 -AllowHttpForLogin
-
 }
 
 #https://github.com/lazywinadmin/PowerShell/blob/master/TOOL-Remove-StringSpecialCharacter/Remove-StringSpecialCharacter.ps1
