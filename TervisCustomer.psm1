@@ -21,8 +21,47 @@ function Find-TervisCustomer {
 		}
 	}
 
+	if ($PhoneNumber) {
+		$PhoneNumberParameters = $PhoneNumber | Get-PhoneNumberPossibility
+	}
+
 	$ParametersHash = $Parameters | ConvertTo-HashTable
-    Find-EBSCustomerAccountNumber @ParametersHash
+    Find-EBSCustomerAccountNumber @ParametersHash @PhoneNumberParameters
+}
+
+function Get-PhoneNumberPossibility {
+	param (
+        [Parameter(Mandatory,ValueFromPipeline)]$PhoneNumber
+	)
+	if (-not $Script:PhoneNumbersTypeLoaded) {
+		Add-Type -path "C:\Program Files\PackageManagement\NuGet\Packages\libphonenumber-csharp.8.9.7\lib\portable-net45+win8+wp8+wpa81\PhoneNumbers.dll" | Out-Null
+	}
+	$PhoneNumberUtil = [Phonenumbers.PhoneNumberUtil]::GetInstance()
+	$Number = $PhoneNumberUtil.Parse($PhoneNumber, "US")
+	#https://en.wikipedia.org/wiki/Telephone_number#/media/File:Phone_number_setup.png
+	$NationalDestinationCode = $Number.NationalNumber.ToString().Substring(0,3)
+	$SubScriberNumber = $Number.NationalNumber.ToString().Substring(3,7)
+	$Possibilites = 
+	(New-EBSPhoneNumberPossibility -Phone_Area_Code $NationalDestinationCode -Phone_Number $SubScriberNumber),
+	(New-EBSPhoneNumberPossibility -Phone_Area_Code $NationalDestinationCode -Phone_Number "$($SubScriberNumber.Substring(0,3))-$($SubScriberNumber.Substring(3,4))"),
+	(New-EBSPhoneNumberPossibility -Phone_Number ($NationalDestinationCode + $SubScriberNumber)),
+	(New-EBSPhoneNumberPossibility -Phone_Number "$NationalDestinationCode-$SubScriberNumber"),
+	(New-EBSPhoneNumberPossibility -Phone_Number "$NationalDestinationCode-$($SubScriberNumber.Substring(0,3))-$($SubScriberNumber.Substring(3,4))"),
+	(New-EBSPhoneNumberPossibility -Phone_Number "($NationalDestinationCode)$SubScriberNumber"),
+	(New-EBSPhoneNumberPossibility -Phone_Number "($NationalDestinationCode)$($SubScriberNumber.Substring(0,3))-$($SubScriberNumber.Substring(3,4))")
+	
+	@{
+		Phone_Area_Code = $Possibilites.Phone_Area_Code
+		Phone_Number = $Possibilites.Phone_Number
+	}
+}
+
+function New-EBSPhoneNumberPossibility {
+	param (
+		$Phone_Area_Code,
+		$Phone_Number
+	)
+	$PSBoundParameters | ConvertFrom-PSBoundParameters
 }
 
 function Get-AddressSlotCombinations { 
