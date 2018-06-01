@@ -22,14 +22,14 @@ function Find-TervisCustomer {
 	}
 
 	if ($PhoneNumber) {
-		$PhoneNumberParameters = $PhoneNumber | Get-PhoneNumberPossibility
+		$PhoneNumberParameters = $PhoneNumber | Get-EBSRawPhoneNumberPossibility
 	}
 
 	$ParametersHash = $Parameters | ConvertTo-HashTable
     Find-EBSCustomerAccountNumber @ParametersHash @PhoneNumberParameters
 }
 
-function Get-PhoneNumberPossibility {
+function Get-EBSRawPhoneNumberPossibility {
 	param (
         [Parameter(Mandatory,ValueFromPipeline)]$PhoneNumber
 	)
@@ -39,21 +39,16 @@ function Get-PhoneNumberPossibility {
 	$PhoneNumberUtil = [Phonenumbers.PhoneNumberUtil]::GetInstance()
 	$Number = $PhoneNumberUtil.Parse($PhoneNumber, "US")
 	#https://en.wikipedia.org/wiki/Telephone_number#/media/File:Phone_number_setup.png
-	$NationalDestinationCode = $Number.NationalNumber.ToString().Substring(0,3)
-	$SubScriberNumber = $Number.NationalNumber.ToString().Substring(3,7)
-	$Possibilites = 
-	(New-EBSPhoneNumberPossibility -Phone_Area_Code $NationalDestinationCode -Phone_Number $SubScriberNumber),
-	(New-EBSPhoneNumberPossibility -Phone_Area_Code $NationalDestinationCode -Phone_Number "$($SubScriberNumber.Substring(0,3))-$($SubScriberNumber.Substring(3,4))"),
-	(New-EBSPhoneNumberPossibility -Phone_Number ($NationalDestinationCode + $SubScriberNumber)),
-	(New-EBSPhoneNumberPossibility -Phone_Number "$NationalDestinationCode-$SubScriberNumber"),
-	(New-EBSPhoneNumberPossibility -Phone_Number "$NationalDestinationCode-$($SubScriberNumber.Substring(0,3))-$($SubScriberNumber.Substring(3,4))"),
-	(New-EBSPhoneNumberPossibility -Phone_Number "($NationalDestinationCode)$SubScriberNumber"),
-	(New-EBSPhoneNumberPossibility -Phone_Number "($NationalDestinationCode)$($SubScriberNumber.Substring(0,3))-$($SubScriberNumber.Substring(3,4))")
+	$NationalNumber = $Number.NationalNumber.ToString()
+	$NationalDestinationCode =$NationalNumber.Substring(0,3)
+	$SubscriberNumber = $NationalNumber.Substring(3,7)
+	$SubscriberNumberBase = $SubScriberNumber.Substring(0,3)
+	$SubscriberNumberDirectInwardDial = $SubscriberNumber.Substring(3,4)
 	
-	@{
-		Phone_Area_Code = $Possibilites.Phone_Area_Code
-		Phone_Number = $Possibilites.Phone_Number
-	}
+	$Number.NationalNumber.ToString(),
+	"+1 $NationalDestinationCode $SubscriberNumber",
+	"$NationalDestinationCode-$SubscriberNumber",
+	"$NationalDestinationCode-$SubscriberNumberBase-$SubscriberNumberDirectInwardDial"
 }
 
 function New-EBSPhoneNumberPossibility {
