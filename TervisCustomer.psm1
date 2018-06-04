@@ -8,8 +8,8 @@ function Find-TervisCustomer {
 		$State,
         $PhoneNumber,
         $Email_Address,
-        $Person_First_Name,
-        $Person_Last_Name
+		$Person_Last_Name,
+		$Party_Name
     )
 	$Parameters = $PSBoundParameters |
 	ConvertFrom-PSBoundParameters -ExcludeProperty PhoneNumber, State
@@ -119,8 +119,8 @@ function New-TervisCustomerSearchDashboard {
 				$State,
 				$PhoneNumber,
 				$Email_Address,
-				$Person_First_Name,
-				$Person_Last_Name
+				$Person_Last_Name,
+				$Party_Name
 			)
 			$GUID = New-Guid | Select-Object -ExpandProperty GUID
 			Set-Item -Path Cache:$GUID -Value (
