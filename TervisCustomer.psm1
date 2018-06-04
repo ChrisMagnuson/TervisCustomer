@@ -22,7 +22,9 @@ function Find-TervisCustomer {
 	}
 
 	if ($PhoneNumber) {
-		$PhoneNumberParameters = $PhoneNumber | Get-EBSRawPhoneNumberPossibility
+		$PhoneNumberParameters = @{
+			Raw_Phone_Number = $PhoneNumber | Get-EBSRawPhoneNumberPossibility
+		} 
 	}
 
 	$ParametersHash = $Parameters | ConvertTo-HashTable
@@ -49,14 +51,6 @@ function Get-EBSRawPhoneNumberPossibility {
 	"+1 $NationalDestinationCode $SubscriberNumber",
 	"$NationalDestinationCode-$SubscriberNumber",
 	"$NationalDestinationCode-$SubscriberNumberBase-$SubscriberNumberDirectInwardDial"
-}
-
-function New-EBSPhoneNumberPossibility {
-	param (
-		$Phone_Area_Code,
-		$Phone_Number
-	)
-	$PSBoundParameters | ConvertFrom-PSBoundParameters
 }
 
 function Get-AddressSlotCombinations { 
