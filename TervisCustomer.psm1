@@ -155,6 +155,8 @@ function New-TervisCustomerSearchDashboard {
 				} |
 				Out-UDGridData
 			}
+		} else {
+			New-UDCard -Title "No Account Number(s) found that match your criteria"
 		}
 	}
 
