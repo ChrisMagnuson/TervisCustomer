@@ -9,7 +9,8 @@ function Find-TervisCustomer {
         $PhoneNumber,
         $Email_Address,
 		$Person_Last_Name,
-		$Party_Name
+		$Party_Name,
+		[Switch]$ReturnEBSQueryOnly
     )
 	$Parameters = $PSBoundParameters |
 	ConvertFrom-PSBoundParameters -ExcludeProperty PhoneNumber, State
@@ -28,7 +29,7 @@ function Find-TervisCustomer {
 	}
 
 	$ParametersHash = $Parameters | ConvertTo-HashTable
-    Find-EBSCustomerAccountNumber @ParametersHash @PhoneNumberParameters
+    Find-EBSCustomerAccountNumber @ParametersHash @PhoneNumberParameters -ReturnQueryOnly:$ReturnEBSQueryOnly
 }
 
 function Get-EBSTransposedPhoneNumberPossibility {
@@ -158,6 +159,28 @@ function New-TervisCustomerSearchDashboard {
 		} else {
 			New-UDCard -Title "No Account Number(s) found that match your criteria"
 		}
+		New-UDCard -Title "Query" -Content {
+			New-UDLink -Text Query -Url /CustomerSearchSQLQuery/$GUID
+		}		
+	}
+
+	$CustomerSearchSQLQueryPage = New-UDPage -Url "/CustomerSearchSQLQuery/:GUID" -Icon link -Endpoint {
+		param(
+			$GUID
+		)		
+		$BoundParameters = Get-Item Cache:$GUID
+		$Query = Find-TervisCustomer @BoundParameters -ReturnEBSQueryOnly
+		
+		if ($Query) {
+			New-UDCard -Title "Query"
+			New-UDHtml -Markup @"
+<pre>
+$($Query | out-string)
+</pre>
+"@
+		} else {
+			New-UDCard -Title "No Query returned"
+		}
 	}
 
 	$AccountDetailsPage = New-UDPage -Url "/AccountDetails/:AccountNumber" -Icon link -Endpoint {
@@ -175,7 +198,7 @@ $($Organization | ConvertTo-Yaml)
 "@
 	}
 	
-	$Dashboard = New-UDDashboard -Pages @($CustomerSearchInputPage, $AccountResultsPage, $AccountDetailsPage) -Title "Tervis Customer Search" -EndpointInitializationScript {
+	$Dashboard = New-UDDashboard -Pages @($CustomerSearchInputPage, $AccountResultsPage, $CustomerSearchSQLQueryPage, $AccountDetailsPage) -Title "Tervis Customer Search" -EndpointInitializationScript {
 		if (-Not $Cache:EBSPowershellConfiguration ) {
 			$Cache:EBSPowershellConfiguration = Get-TervisEBSPowershellConfiguration -Name Delta
 		}
@@ -259,3 +282,82 @@ function Remove-StringSpecialCharacter
 	} #PROCESS
 }
 
+function New-TervisUDPreloader {
+    [CmdletBinding(DefaultParameterSetName = "indeterminate")]
+    param(
+        [Parameter(ParameterSetName = "determinate")]
+        [ValidateRange(0, 100)]
+        $PercentComplete,
+        [Parameter(ParameterSetName = "determinate")]
+        [Parameter(ParameterSetName = "indeterminate")]
+        [PowerShellProTools.UniversalDashboard.Models.DashboardColor]$BackgroundColor,
+        [Parameter(ParameterSetName = "determinate")]
+        [Parameter(ParameterSetName = "indeterminate")]
+        [PowerShellProTools.UniversalDashboard.Models.DashboardColor]$ProgressColor,
+        [Parameter(ParameterSetName = 'circular')]
+        [Switch]$Circular,
+        [Parameter(ParameterSetName = 'circular')]
+        [ValidateSet('blue', 'red', 'green')]
+        [string]$Color,
+        [Parameter(ParameterSetName = 'circular')]
+        [ValidateSet('small', 'medium', 'large')]
+        [string]$Size
+        )
+
+    if ($PSCmdlet.ParameterSetName -eq 'circular') {
+        $sizeClass = ''
+        switch ($Size) {
+            "small" { $sizeClass = 'small' }
+            "large" { $sizeClass = 'big' }
+        }
+
+        New-UDElement -Tag 'div' -Id preloader -Attributes @{className = "preloader-wrapper $sizeClass active"} -Content {
+            New-UDElement -Tag 'div' -Attributes @{ className = "spinner-layer spinner-$color-only"} -Content {
+                New-UDElement -Tag 'div' -Attributes @{ className = 'circle-clipper left'} -Content {
+                    New-UDElement -Tag 'div' -Attributes @{ className ='circle' } 
+                }
+                New-UDElement -Tag 'div' -Attributes @{ className = 'gap-patch'} -Content {
+                    New-UDElement -Tag 'div' -Attributes @{ className ='circle' } 
+                }
+                New-UDElement -Tag 'div' -Attributes @{ className = 'circle-clipper right'} -Content {
+                    New-UDElement -Tag 'div' -Attributes @{ className ='circle' } 
+                }
+            }
+        }
+    }
+    else 
+    {
+        $OutsideAttributes = @{
+            className = "progress"
+        }
+    
+        if ($PSBoundParameters.ContainsKey("BackgroundColor")) {
+            $OutsideAttributes.style = @{
+                backgroundColor = $BackgroundColor.HtmlColor
+            }
+        }
+        
+        New-UDElement -Tag "div" -Attributes $OutsideAttributes -Content {
+            $Attributes = @{
+                className = $PSCmdlet.ParameterSetName
+            }
+    
+            if ($PSBoundParameters.ContainsKey("ProgressColor")) {
+                $Attributes.style = @{
+                    backgroundColor = $ProgressColor.HtmlColor
+                }
+            }
+    
+            if ($PSCmdlet.ParameterSetName -eq "determinate") {
+                $Attributes["style"] = @{
+                    width = "$($PercentComplete)%"
+                }
+            }
+    
+            New-UDElement -Tag "div" -Id preloader -Attributes $Attributes
+        }
+    }
+    
+
+
+}
