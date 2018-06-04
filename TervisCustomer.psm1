@@ -23,7 +23,7 @@ function Find-TervisCustomer {
 
 	if ($PhoneNumber) {
 		$PhoneNumberParameters = @{
-			Raw_Phone_Number = $PhoneNumber | Get-EBSRawPhoneNumberPossibility
+			Transposed_Phone_Number = $PhoneNumber | Get-EBSTransposedPhoneNumberPossibility
 		} 
 	}
 
@@ -31,7 +31,7 @@ function Find-TervisCustomer {
     Find-EBSCustomerAccountNumber @ParametersHash @PhoneNumberParameters
 }
 
-function Get-EBSRawPhoneNumberPossibility {
+function Get-EBSTransposedPhoneNumberPossibility {
 	param (
         [Parameter(Mandatory,ValueFromPipeline)]$PhoneNumber
 	)
@@ -42,15 +42,12 @@ function Get-EBSRawPhoneNumberPossibility {
 	$Number = $PhoneNumberUtil.Parse($PhoneNumber, "US")
 	#https://en.wikipedia.org/wiki/Telephone_number#/media/File:Phone_number_setup.png
 	$NationalNumber = $Number.NationalNumber.ToString()
-	$NationalDestinationCode =$NationalNumber.Substring(0,3)
-	$SubscriberNumber = $NationalNumber.Substring(3,7)
-	$SubscriberNumberBase = $SubScriberNumber.Substring(0,3)
-	$SubscriberNumberDirectInwardDial = $SubscriberNumber.Substring(3,4)
-	
-	$Number.NationalNumber.ToString(),
-	"+1 $NationalDestinationCode $SubscriberNumber",
-	"$NationalDestinationCode-$SubscriberNumber",
-	"$NationalDestinationCode-$SubscriberNumberBase-$SubscriberNumberDirectInwardDial"
+	$NationalNumberArray = $NationalNumber.ToCharArray()
+	[array]::Reverse($NationalNumberArray)
+	$NationalNumberReversed = -join($NationalNumberArray)
+
+	$NationalNumberReversed,
+	"$($NationalNumberReversed)1"
 }
 
 function Get-AddressSlotCombinations { 
