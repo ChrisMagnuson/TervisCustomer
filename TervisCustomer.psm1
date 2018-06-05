@@ -357,7 +357,22 @@ function New-TervisUDPreloader {
             New-UDElement -Tag "div" -Id preloader -Attributes $Attributes
         }
     }
-    
+}
 
+function Install-TervisCustomer {
+	param (
+		$ComputerName
+	)
+	Install-PowerShellApplicationUniversalDashboard -ComputerName $ComputerName -ModuleName TervisCustomer -DependentTervisModuleNames InvokeSQL,
+		OracleE-BusinessSuitePowerShell,
+		PasswordstatePowerShell,
+		TervisMicrosoft.PowerShell.Utility,
+		TervisOracleE-BusinessSuitePowerShell,
+		TervisPasswordstate,
+		UniversalDashboard -CommandString "New-TervisCustomerSearchDashboard"
 
+	$PowerShellApplicationInstallDirectory = Get-PowerShellApplicationInstallDirectory -ComputerName $ComputerName -ModuleName TervisCustomer
+	Invoke-Command -ComputerName $ComputerName -ScriptBlock {
+		Publish-UDDashboard -DashboardFile $Using:PowerShellApplicationInstallDirectory\Script.ps1
+	}
 }
