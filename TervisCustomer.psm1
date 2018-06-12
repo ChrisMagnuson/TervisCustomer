@@ -363,16 +363,25 @@ function Install-TervisCustomer {
 	param (
 		$ComputerName
 	)
-	Install-PowerShellApplicationUniversalDashboard -ComputerName $ComputerName -ModuleName TervisCustomer -DependentTervisModuleNames InvokeSQL,
+	Install-PowerShellApplicationUniversalDashboard -ComputerName $ComputerName -ModuleName TervisCustomer -TervisModuleDependencies InvokeSQL,
 		OracleE-BusinessSuitePowerShell,
 		PasswordstatePowerShell,
 		TervisMicrosoft.PowerShell.Utility,
 		TervisOracleE-BusinessSuitePowerShell,
 		TervisPasswordstate,
-		UniversalDashboard -CommandString "New-TervisCustomerSearchDashboard"
+		TervisGithub -PowerShellGalleryDependencies UniversalDashboard -NugetDependencies libphonenumber-csharp,
+		@{
+			Name = "Oracle.ManagedDataAccess.Core"
+			Version = "2.12.0-beta2"
+		} -CommandString "New-TervisCustomerSearchDashboard"
 
 	$PowerShellApplicationInstallDirectory = Get-PowerShellApplicationInstallDirectory -ComputerName $ComputerName -ModuleName TervisCustomer
 	Invoke-Command -ComputerName $ComputerName -ScriptBlock {
+		#. $Using:PowerShellApplicationInstallDirectory\Import-ApplicationModules.ps1
+		#Set-PSRepository -Trusted -Name PowerShellGallery
+		#Install-Module -Name UniversalDashboard -Scopoe CurrentUser
+		#$PSModulePathCurrentUser = Get-UserPSModulePath
+		#Copy-Item -Path $PSModulePathCurrentUser -Destination $Using:PowerShellApplicationInstallDirectory\. -Recurse
 		Publish-UDDashboard -DashboardFile $Using:PowerShellApplicationInstallDirectory\Script.ps1
 	}
 }
