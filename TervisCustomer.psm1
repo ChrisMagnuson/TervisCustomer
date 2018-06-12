@@ -1,4 +1,8 @@
-$ModulePath = (Get-Module -ListAvailable TervisCustomer).ModuleBase
+$ModulePath = if ($PSScriptRoot) {
+	$PSScriptRoot
+} else {
+	(Get-Module -ListAvailable TervisCustomer).ModuleBase
+}
 . $ModulePath\Definition.ps1
 
 function Find-TervisCustomer {
@@ -36,9 +40,6 @@ function Get-EBSTransposedPhoneNumberPossibility {
 	param (
         [Parameter(Mandatory,ValueFromPipeline)]$PhoneNumber
 	)
-	if (-not $Script:PhoneNumbersTypeLoaded) {
-		Add-Type -path "C:\Program Files\PackageManagement\NuGet\Packages\libphonenumber-csharp.8.9.7\lib\portable-net45+win8+wp8+wpa81\PhoneNumbers.dll" | Out-Null
-	}
 	$PhoneNumberUtil = [Phonenumbers.PhoneNumberUtil]::GetInstance()
 	$Number = $PhoneNumberUtil.Parse($PhoneNumber, "US")
 	#https://en.wikipedia.org/wiki/Telephone_number#/media/File:Phone_number_setup.png
@@ -369,10 +370,20 @@ function Install-TervisCustomer {
 		TervisMicrosoft.PowerShell.Utility,
 		TervisOracleE-BusinessSuitePowerShell,
 		TervisPasswordstate,
-		TervisGithub -PowerShellGalleryDependencies UniversalDashboard -NugetDependencies libphonenumber-csharp,
+		TervisGithub -PowerShellGalleryDependencies UniversalDashboard -NugetDependencies @{
+			"libphonenumber-csharp" = @{
+				DependencyType = "PSGalleryNuget"
+				Source = "https://www.nuget.org/api/v2"
+			}
+		},
 		@{
-			Name = "Oracle.ManagedDataAccess.Core"
-			Version = "2.12.0-beta2"
+			"Oracle.ManagedDataAccess.Core" = @{
+				DependencyType = "Package"
+				Version = "2.12.0-beta2"
+				Parameters = @{
+					ProviderName = "nuget"
+				}
+			}
 		} -CommandString "New-TervisCustomerSearchDashboard"
 
 	$PowerShellApplicationInstallDirectory = Get-PowerShellApplicationInstallDirectory -ComputerName $ComputerName -ModuleName TervisCustomer
