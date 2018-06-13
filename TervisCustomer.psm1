@@ -40,6 +40,9 @@ function Get-EBSTransposedPhoneNumberPossibility {
 	param (
         [Parameter(Mandatory,ValueFromPipeline)]$PhoneNumber
 	)
+	if (-not [Phonenumbers.PhoneNumberUtil]) {
+		Add-Type -path "C:\Program Files\PackageManagement\NuGet\Packages\libphonenumber-csharp.8.9.7\lib\portable-net45+win8+wp8+wpa81\PhoneNumbers.dll" | Out-Null
+	}
 	$PhoneNumberUtil = [Phonenumbers.PhoneNumberUtil]::GetInstance()
 	$Number = $PhoneNumberUtil.Parse($PhoneNumber, "US")
 	#https://en.wikipedia.org/wiki/Telephone_number#/media/File:Phone_number_setup.png
@@ -370,7 +373,7 @@ function Install-TervisCustomer {
 		TervisMicrosoft.PowerShell.Utility,
 		TervisOracleE-BusinessSuitePowerShell,
 		TervisPasswordstate,
-		TervisGithub -PowerShellGalleryDependencies UniversalDashboard -NugetDependencies @{
+		TervisGithub -PowerShellGalleryDependencies UniversalDashboard, powershell-yaml -NugetDependencies @{
 			"libphonenumber-csharp" = @{
 				DependencyType = "PSGalleryNuget"
 				Source = "https://www.nuget.org/api/v2"
@@ -388,6 +391,7 @@ function Install-TervisCustomer {
 
 	$PowerShellApplicationInstallDirectory = Get-PowerShellApplicationInstallDirectory -ComputerName $ComputerName -ModuleName TervisCustomer
 	Invoke-Command -ComputerName $ComputerName -ScriptBlock {
+		New-NetFirewallRule -Name UniversalDashboard -Profile Any -Direction Inbound -Action Allow -LocalPort 10000 -DisplayName UniversalDashboard -Protocol TCP
 		#. $Using:PowerShellApplicationInstallDirectory\Import-ApplicationModules.ps1
 		#Set-PSRepository -Trusted -Name PowerShellGallery
 		#Install-Module -Name UniversalDashboard -Scopoe CurrentUser
