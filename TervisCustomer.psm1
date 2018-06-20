@@ -298,29 +298,27 @@ function Install-TervisCustomer {
 		TervisPasswordstate,
 		TervisGithub,
 		TervisUniversalDashboard -PowerShellGalleryDependencies UniversalDashboard, powershell-yaml -NugetDependencies @{
+			"Oracle.ManagedDataAccess.Core" = @{
+				DependencyType = "PSGalleryNuget"
+				Source = "https://www.nuget.org/api/v2"
+				Version = "2.12.0-beta2"
+			}
+		},
+		@{
 			"libphonenumber-csharp" = @{
 				DependencyType = "PSGalleryNuget"
 				Source = "https://www.nuget.org/api/v2"
 			}
-		},
-		@{
-			"Oracle.ManagedDataAccess.Core" = @{
-				DependencyType = "Package"
-				Version = "2.12.0-beta2"
-				Parameters = @{
-					ProviderName = "nuget"
-				}
-			}
 		} -CommandString "New-TervisCustomerSearchDashboard"
-
+		
 	$PowerShellApplicationInstallDirectory = Get-PowerShellApplicationInstallDirectory -ComputerName $ComputerName -ModuleName TervisCustomer
 	Invoke-Command -ComputerName $ComputerName -ScriptBlock {
 		New-NetFirewallRule -Name UniversalDashboard -Profile Any -Direction Inbound -Action Allow -LocalPort 10000 -DisplayName UniversalDashboard -Protocol TCP
-		#. $Using:PowerShellApplicationInstallDirectory\Import-ApplicationModules.ps1
-		#Set-PSRepository -Trusted -Name PowerShellGallery
-		#Install-Module -Name UniversalDashboard -Scopoe CurrentUser
-		#$PSModulePathCurrentUser = Get-UserPSModulePath
-		#Copy-Item -Path $PSModulePathCurrentUser -Destination $Using:PowerShellApplicationInstallDirectory\. -Recurse
+	#	#. $Using:PowerShellApplicationInstallDirectory\Import-ApplicationModules.ps1
+	#	#Set-PSRepository -Trusted -Name PowerShellGallery
+	#	#Install-Module -Name UniversalDashboard -Scopoe CurrentUser
+	#	#$PSModulePathCurrentUser = Get-UserPSModulePath
+	#	#Copy-Item -Path $PSModulePathCurrentUser -Destination $Using:PowerShellApplicationInstallDirectory\. -Recurse
 		Publish-UDDashboard -DashboardFile $Using:PowerShellApplicationInstallDirectory\Script.ps1
 	}
 }
