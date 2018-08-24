@@ -320,7 +320,7 @@ function Install-TervisCustomer {
 		PasswordstatePowerShell,
 		TervisMicrosoft.PowerShell.Utility,
 		TervisOracleE-BusinessSuitePowerShell,
-		TervisPasswordstate,
+		TervisPasswordstatePowerShell,
 		TervisGithub,
 		TervisUniversalDashboard -PowerShellGalleryDependencies UniversalDashboard, powershell-yaml -NugetDependencies @{
 			"Oracle.ManagedDataAccess.Core" = @{
