@@ -315,7 +315,7 @@ function Install-TervisCustomer {
 	$PasswordstateAPIKey = Get-TervisPasswordstatePassword -Guid "2a45b43c-b4d1-49c8-879a-c708716c9c7b" |
     Select-Object -ExpandProperty Password
 
-	Install-PowerShellApplicationUniversalDashboard -ComputerName $ComputerName -ModuleName TervisCustomer -TervisModuleDependencies InvokeSQL,
+	Install-PowerShellApplicationUniversalDashboard @PSBoundParameters -ModuleName TervisCustomer -TervisModuleDependencies InvokeSQL,
 		OracleE-BusinessSuitePowerShell,
 		PasswordstatePowerShell,
 		TervisMicrosoft.PowerShell.Utility,
@@ -346,9 +346,5 @@ if (-Not `$Cache:EBSPowershellConfiguration ) {
 
 Set-EBSPowershellConfiguration -Configuration `$Cache:EBSPowershellConfiguration
 New-TervisCustomerSearchDashboard
-"@ -UseTLS -DashboardPassswordstateAPIKey $PasswordstateAPIKey
-		
-	#Invoke-Command -ComputerName $ComputerName -ScriptBlock {
-	#	New-NetFirewallRule -Name UniversalDashboard -Profile Any -Direction Inbound -Action Allow -LocalPort 10000 -DisplayName UniversalDashboard -Protocol TCP
-	#}
+"@ -UseTLS -DashboardPassswordstateAPIKey $PasswordstateAPIKey -Port 10000
 }
