@@ -312,7 +312,7 @@ function Install-TervisCustomer {
 		$EnvironmentName
 	)
 
-	$PasswordstateAPIKey = Get-TervisPasswordstatePassword -Guid "3dfe3799-74f6-4dca-81b1-d37f355c790e" |
+	$PasswordstateAPIKey = Get-TervisPasswordstatePassword -Guid "2a45b43c-b4d1-49c8-879a-c708716c9c7b" |
     Select-Object -ExpandProperty Password
 
 	Install-PowerShellApplicationUniversalDashboard @PSBoundParameters -ModuleName TervisCustomer -TervisModuleDependencies InvokeSQL,
@@ -322,7 +322,9 @@ function Install-TervisCustomer {
 		TervisOracleE-BusinessSuitePowerShell,
 		TervisPasswordstatePowerShell,
 		TervisGithub,
-		TervisUniversalDashboard -PowerShellGalleryDependencies UniversalDashboard, powershell-yaml -NugetDependencies @{
+		TervisUniversalDashboard,
+		WebServicesPowerShellProxyBuilder,
+		TervisMicrosoft.PowerShell.Security -PowerShellGalleryDependencies UniversalDashboard, powershell-yaml -NugetDependencies @{
 			"Oracle.ManagedDataAccess.Core" = @{
 				DependencyType = "PSGalleryNuget"
 				Source = "https://www.nuget.org/api/v2"
