@@ -113,7 +113,22 @@ function Get-AddressWordAlternative {
     }
 }
 
+function Invoke-TervisCustomerSearchDashboard {
+    $CertificateFilePassword = Get-TervisPasswordstatePassword -GUID "49d35824-dcce-4fc1-98ff-ebb7ecc971de" -AsCredential |
+    Select-Object -ExpandProperty Password
+    
+    $ScriptContent = Get-Content -Path $MyInvocation.ScriptName -Raw
+    $EndpointInitializationScript = [Scriptblock]::Create($ScriptContent.Replace("Invoke-TervisCustomerSearchDashboard",""))
+    $File = Get-item -Path .\certificate.pfx
+    New-TervisCustomerSearchDashboard -EndpointInitializationScript $EndpointInitializationScript -CertificateFile $File -CertificateFilePassword $CertificateFilePassword
+}
+
 function New-TervisCustomerSearchDashboard {
+	param (
+        [ScriptBlock]$EndpointInitializationScript,
+        $CertificateFile,
+        $CertificateFilePassword
+    )
 	Get-UDDashboard | Where port -eq 10000 | Stop-UDDashboard
 
 	$CustomerSearchInputPage = New-UDPage -Name "CustomerSearchInput" -Icon home -Content {
@@ -147,13 +162,18 @@ function New-TervisCustomerSearchDashboard {
 		if ($AccountNumber) {
 			New-UDCard -Title "Account Number(s)" -Text ($AccountNumber | Out-String)
 
-			New-UDGrid -Title "Customers" -Headers AccountNumber, PARTY_NAME, ADDRESS1, CITY, STATE, POSTAL_CODE -Properties AccountNumber, PARTY_NAME, ADDRESS1, CITY, STATE, POSTAL_CODE -Endpoint {
+			New-UDGrid -Title "Customers" -Headers AccountNumber, PARTY_NAME, EMAIL_ADDRESS, PhoneNumber, ADDRESS1, CITY, STATE, POSTAL_CODE -Properties AccountNumber, PARTY_NAME, EMAIL_ADDRESS, PhoneNumber, ADDRESS1, CITY, STATE, POSTAL_CODE -Endpoint {
 				$AccountNumber | 
 				% { 
 					$Account = Get-EBSTradingCommunityArchitectureCustomerAccount -Account_Number $_
 					$Organization = Get-EBSTradingCommunityArchitectureOrganizationObject -Party_ID $Account.Party_ID
 					$Organization | 
-					Select-Object -Property PARTY_NAME, ADDRESS1, CITY, STATE, POSTAL_CODE, @{
+					Select-Object -Property PARTY_NAME, EMAIL_ADDRESS, @{
+						Name = "PhoneNumber"
+						Expression = {
+							"+$($_.PRIMARY_PHONE_COUNTRY_CODE)$($_.PRIMARY_PHONE_AREA_CODE)$($_.PRIMARY_PHONE_NUMBER)"
+						}
+					}, ADDRESS1, CITY, STATE, POSTAL_CODE, @{
 						Name = "AccountNumber"
 						Expression = {New-UDLink -Text $Account.ACCOUNT_NUMBER -Url "/AccountDetails/$($Account.ACCOUNT_NUMBER)"}
 					}
@@ -202,14 +222,14 @@ $($Organization | ConvertTo-Yaml)
 "@
 	}
 	
-	$Dashboard = New-UDDashboard -Pages @($CustomerSearchInputPage, $AccountResultsPage, $CustomerSearchSQLQueryPage, $AccountDetailsPage) -Title "Tervis Customer Search" -EndpointInitializationScript {
-		if (-Not $Cache:EBSPowershellConfiguration ) {
-			$Cache:EBSPowershellConfiguration = Get-TervisEBSPowershellConfiguration -Name Delta
-		}
-		Set-EBSPowershellConfiguration -Configuration $Cache:EBSPowershellConfiguration
-	}
+	$Dashboard = New-UDDashboard -Pages @(
+		$CustomerSearchInputPage,
+		$AccountResultsPage,
+		$CustomerSearchSQLQueryPage,
+		$AccountDetailsPage
+	) -Title "Tervis Customer Search" -EndpointInitializationScript $EndpointInitializationScript
 
-	Start-UDDashboard -Dashboard $Dashboard -Port 10000 -AllowHttpForLogin
+	Start-UDDashboard -Dashboard $Dashboard -Port 10000 -CertificateFile $CertificateFile -CertificateFilePassword $CertificateFilePassword -Wait
 }
 
 #https://github.com/lazywinadmin/PowerShell/blob/master/TOOL-Remove-StringSpecialCharacter/Remove-StringSpecialCharacter.ps1
@@ -288,8 +308,13 @@ function Remove-StringSpecialCharacter
 
 function Install-TervisCustomer {
 	param (
-		$ComputerName
+		$ComputerName,
+		$EnvironmentName
 	)
+
+	$PasswordstateAPIKey = Get-TervisPasswordstatePassword -Guid "2a45b43c-b4d1-49c8-879a-c708716c9c7b" |
+    Select-Object -ExpandProperty Password
+
 	Install-PowerShellApplicationUniversalDashboard -ComputerName $ComputerName -ModuleName TervisCustomer -TervisModuleDependencies InvokeSQL,
 		OracleE-BusinessSuitePowerShell,
 		PasswordstatePowerShell,
@@ -309,16 +334,21 @@ function Install-TervisCustomer {
 				DependencyType = "PSGalleryNuget"
 				Source = "https://www.nuget.org/api/v2"
 			}
-		} -CommandString "New-TervisCustomerSearchDashboard"
+		} -CommandString @"
+`$CacheDrive = Get-PSDrive -Name Cache -ErrorAction SilentlyContinue
+if (-not `$CacheDrive) {
+	Import-Module UniversalDashboard
+}
+
+if (-Not `$Cache:EBSPowershellConfiguration ) {
+	`$Cache:EBSPowershellConfiguration = Get-TervisEBSPowershellConfiguration -Name $EnvironmentName
+}
+
+Set-EBSPowershellConfiguration -Configuration `$Cache:EBSPowershellConfiguration
+New-TervisCustomerSearchDashboard
+"@ -UseTLS -DashboardPassswordstateAPIKey $PasswordstateAPIKey
 		
-	$PowerShellApplicationInstallDirectory = Get-PowerShellApplicationInstallDirectory -ComputerName $ComputerName -ModuleName TervisCustomer
-	Invoke-Command -ComputerName $ComputerName -ScriptBlock {
-		New-NetFirewallRule -Name UniversalDashboard -Profile Any -Direction Inbound -Action Allow -LocalPort 10000 -DisplayName UniversalDashboard -Protocol TCP
-	#	#. $Using:PowerShellApplicationInstallDirectory\Import-ApplicationModules.ps1
-	#	#Set-PSRepository -Trusted -Name PowerShellGallery
-	#	#Install-Module -Name UniversalDashboard -Scopoe CurrentUser
-	#	#$PSModulePathCurrentUser = Get-UserPSModulePath
-	#	#Copy-Item -Path $PSModulePathCurrentUser -Destination $Using:PowerShellApplicationInstallDirectory\. -Recurse
-		Publish-UDDashboard -DashboardFile $Using:PowerShellApplicationInstallDirectory\Script.ps1
-	}
+	#Invoke-Command -ComputerName $ComputerName -ScriptBlock {
+	#	New-NetFirewallRule -Name UniversalDashboard -Profile Any -Direction Inbound -Action Allow -LocalPort 10000 -DisplayName UniversalDashboard -Protocol TCP
+	#}
 }
