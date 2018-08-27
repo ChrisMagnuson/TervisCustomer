@@ -171,7 +171,7 @@ function New-TervisCustomerSearchDashboard {
 					Select-Object -Property PARTY_NAME, EMAIL_ADDRESS, @{
 						Name = "PhoneNumber"
 						Expression = {
-							"+$($_.PRIMARY_PHONE_COUNTRY_CODE)$($_.PRIMARY_PHONE_AREA_CODE)$($_.PRIMARY_PHONE_NUMBER)"
+							"$($_.PRIMARY_PHONE_COUNTRY_CODE)$($_.PRIMARY_PHONE_AREA_CODE)$($_.PRIMARY_PHONE_NUMBER)"
 						}
 					}, ADDRESS1, CITY, STATE, POSTAL_CODE, @{
 						Name = "AccountNumber"
