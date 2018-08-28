@@ -311,7 +311,6 @@ function Install-TervisCustomer {
 		$ComputerName,
 		$EnvironmentName
 	)
-
 	$PasswordstateAPIKey = Get-TervisPasswordstatePassword -Guid "2a45b43c-b4d1-49c8-879a-c708716c9c7b" |
     Select-Object -ExpandProperty Password
 
@@ -324,18 +323,13 @@ function Install-TervisCustomer {
 		TervisGithub,
 		TervisUniversalDashboard,
 		WebServicesPowerShellProxyBuilder,
-		TervisMicrosoft.PowerShell.Security -PowerShellGalleryDependencies UniversalDashboard, powershell-yaml -NugetDependencies @{
-			"Oracle.ManagedDataAccess.Core" = @{
-				DependencyType = "PSGalleryNuget"
-				Source = "https://www.nuget.org/api/v2"
-				Version = "2.12.0-beta2"
-			}
+		TervisMicrosoft.PowerShell.Security -PowerShellGalleryDependencies powershell-yaml -PowerShellNugetDependencies @{
+			Name = "Oracle.ManagedDataAccess.Core" 
+			RequiredVersion = "2.12.0-beta2"
 		},
 		@{
-			"libphonenumber-csharp" = @{
-				DependencyType = "PSGalleryNuget"
-				Source = "https://www.nuget.org/api/v2"
-			}
+			Name = "libphonenumber-csharp"
+			SkipDependencies = $true
 		} -CommandString @"
 `$CacheDrive = Get-PSDrive -Name Cache -ErrorAction SilentlyContinue
 if (-not `$CacheDrive) {
