@@ -342,5 +342,5 @@ if (-Not `$Cache:EBSPowershellConfiguration ) {
 
 Set-EBSPowershellConfiguration -Configuration `$Cache:EBSPowershellConfiguration
 Invoke-TervisCustomerSearchDashboard
-"@ -UseTLS -DashboardPassswordstateAPIKey $PasswordstateAPIKey -Port 10000
+"@ -UseTLS -DashboardPasswordstateAPIKey $PasswordstateAPIKey -Port 10000
 }
