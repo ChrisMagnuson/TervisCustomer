@@ -222,12 +222,20 @@ $($Organization | ConvertTo-Yaml)
 "@
 	}
 	
+	$EndpointInitializationScript |
+    Out-File -FilePath .\InitilizationModule.psm1
+
+    $InitilizationModuleFullName = Get-Item -Path .\InitilizationModule.psm1 |
+    Select-Object -ExpandProperty FullName
+    
+    $EndpointInitialization = New-UDEndpointInitialization -Module @( $InitilizationModuleFullName )
+
 	$Dashboard = New-UDDashboard -Pages @(
 		$CustomerSearchInputPage,
 		$AccountResultsPage,
 		$CustomerSearchSQLQueryPage,
 		$AccountDetailsPage
-	) -Title "Tervis Customer Search" -EndpointInitializationScript $EndpointInitializationScript
+	) -Title "Tervis Customer Search" -EndpointInitialization $EndpointInitialization
 
 	Start-UDDashboard -Dashboard $Dashboard -Port 10000 -CertificateFile $CertificateFile -CertificateFilePassword $CertificateFilePassword -Wait
 }
@@ -323,18 +331,25 @@ function Install-TervisCustomer {
 		TervisGithub,
 		TervisUniversalDashboard,
 		WebServicesPowerShellProxyBuilder,
-		TervisMicrosoft.PowerShell.Security -PowerShellGalleryDependencies powershell-yaml -PowerShellNugetDependencies @{
-			Name = "Oracle.ManagedDataAccess.Core" 
-			RequiredVersion = "2.12.0-beta2"
+		TervisMicrosoft.PowerShell.Security,
+		TervisCustomer -PowerShellGalleryDependencies @{
+			Name = "powershell-yaml"
+		}, 
+		@{
+				Name = "UniversalDashboard"
+				RequiredVersion="2.2.1"
+		} -PowerShellNugetDependencies @{
+			Name = "Oracle.ManagedDataAccess.Core"
 		},
 		@{
 			Name = "libphonenumber-csharp"
 			SkipDependencies = $true
 		} -CommandString @"
-`$CacheDrive = Get-PSDrive -Name Cache -ErrorAction SilentlyContinue
-if (-not `$CacheDrive) {
-	Import-Module UniversalDashboard
-}
+# Hopefully the below is not still needed, if it is we will have to figure out a way to import the correct directory that contains UD
+#`$CacheDrive = Get-PSDrive -Name Cache -ErrorAction SilentlyContinue
+#if (-not `$CacheDrive) {
+#	Import-Module UniversalDashboard
+#}
 
 if (-Not `$Cache:EBSPowershellConfiguration ) {
 	`$Cache:EBSPowershellConfiguration = Get-TervisEBSPowershellConfiguration -Name $EnvironmentName
