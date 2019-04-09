@@ -223,7 +223,7 @@ $($Organization | ConvertTo-Yaml)
 	}
 	
 	$EndpointInitializationScript |
-    Out-File -FilePath .\InitilizationModule.psm1
+    Set-Content -Path .\InitilizationModule.psm1
 
     $InitilizationModuleFullName = Get-Item -Path .\InitilizationModule.psm1 |
     Select-Object -ExpandProperty FullName
