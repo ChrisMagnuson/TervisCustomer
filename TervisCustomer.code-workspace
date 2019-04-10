@@ -2,6 +2,12 @@
 	"folders": [
 		{
 			"path": "."
+		},
+		{
+			"path": "..\\PowerShellApplication"
+		},
+		{
+			"path": "..\\TervisDockerPowerShell"
 		}
 	],
 	"settings": {}
