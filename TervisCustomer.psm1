@@ -361,7 +361,10 @@ function Install-TervisCustomer {
 
 Invoke-PowerShellApplicationDockerBuild
 
-Install-PowerShellApplicationUniversalDashboard @PSBoundParameters -ModuleName TervisCustomer -TervisModuleDependencies InvokeSQL,
+Install-PowerShellApplicationUniversalDashboard @PSBoundParameters `
+	-PasswordstateAPIKey $PasswordstateAPIKey `
+	-ModuleName TervisCustomer `
+	-TervisModuleDependencies InvokeSQL,
 		OracleE-BusinessSuitePowerShell,
 		PasswordstatePowerShell,
 		TervisMicrosoft.PowerShell.Utility,
@@ -371,7 +374,8 @@ Install-PowerShellApplicationUniversalDashboard @PSBoundParameters -ModuleName T
 		TervisUniversalDashboard,
 		WebServicesPowerShellProxyBuilder,
 		TervisMicrosoft.PowerShell.Security,
-		TervisCustomer -PowerShellGalleryDependencies @{
+		TervisCustomer `
+	-PowerShellGalleryDependencies @{
 			Name = "powershell-yaml"
 		}, 
 		@{
@@ -383,7 +387,8 @@ Install-PowerShellApplicationUniversalDashboard @PSBoundParameters -ModuleName T
 		@{
 			Name = "libphonenumber-csharp"
 			SkipDependencies = $true
-		} -CommandString @"
+		} `
+	-CommandString @"
 # Hopefully the below is not still needed, if it is we will have to figure out a way to import the correct directory that contains UD
 #`$CacheDrive = Get-PSDrive -Name Cache -ErrorAction SilentlyContinue
 #if (-not `$CacheDrive) {
@@ -396,8 +401,10 @@ if (-Not `$Cache:EBSPowershellConfiguration ) {
 
 Set-EBSPowershellConfiguration -Configuration `$Cache:EBSPowershellConfiguration
 Invoke-TervisCustomerSearchDashboard
-"@ -UseTLS -PasswordStatePasswordGUID  -Port 10000
+"@ `
+	-UseTLS `
+	-Port 10000
 
-docker run -dit --name terviscustomer terviscustomerv1
-docker exec -it terviscustomer pwsh
+	docker run -dit --name terviscustomer terviscustomerv1
+	docker exec -it terviscustomer pwsh
 }
