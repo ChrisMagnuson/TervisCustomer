@@ -397,4 +397,7 @@ if (-Not `$Cache:EBSPowershellConfiguration ) {
 Set-EBSPowershellConfiguration -Configuration `$Cache:EBSPowershellConfiguration
 Invoke-TervisCustomerSearchDashboard
 "@ -UseTLS -PasswordStatePasswordGUID  -Port 10000
+
+docker run -dit --name terviscustomer terviscustomerv1
+docker exec -it terviscustomer pwsh
 }
