@@ -49,7 +49,7 @@ function Get-EBSTransposedPhoneNumberPossibility {
 	$NationalNumber = $Number.NationalNumber.ToString()
 	$NationalNumberArray = $NationalNumber.ToCharArray()
 	[array]::Reverse($NationalNumberArray)
-	$NationalNumberReversed = -join($NationalNumberArray)
+	$NationalNumberReversed = -join ($NationalNumberArray)
 
 	$NationalNumberReversed,
 	"$($NationalNumberReversed)1"
